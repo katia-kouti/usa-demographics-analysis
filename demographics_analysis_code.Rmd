@@ -1,0 +1,378 @@
+---
+title: "Final"
+output: html_document
+date: "2024-02-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### This project explors the "county_demographics.csv" dataset. It works with demographics from counties in the United States . 
+
+## Data preprocessing 
+
+First, I load the necessary libraries (install packages, if needed), read the data set and print its content!
+```{r }
+# Install and load packages if not already installed
+#install.packages("corrplot")
+# install.packages("GGally")
+#install.packages("cowplot")
+#install.packages("ggrepel")
+#install.packages("usmap")
+
+library(usmap)
+library(ggrepel)
+library(cowplot)
+library(GGally)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+
+
+# Set the path to your CSV file
+csv_file_path <- "county_demographics.csv"
+
+# Read the CSV file
+data <- read.csv(csv_file_path)
+
+# Print the contents of the data
+#head(data)
+
+```
+
+## 1. Descriptive statistics, Missing values, Outliers! 
+
+### Descriptive statistics
+
+Summary of dataset
+```{r }
+summary(data)
+```
+
+
+Histogram plots in order to visualize the distribution of numeric variables in the dataset.
+
+```{r }
+numeric_vars <- sapply(data, is.numeric)
+numeric_data <- data[, numeric_vars]
+
+par(mfrow=c(2,2)) # Change the layout to arrange plots in a 2x2 grid
+for (col in names(numeric_data)) {
+  hist(data[[col]], main=col, xlab="Value", ylab="Frequency")
+}
+``` 
+
+
+Scatter plots in order to visualize the relationship between pairs of numeric variables!
+
+```{r }
+# Adjust the size of the plotting region
+par(mfrow=c(2, 2), mar=c(4, 4, 2, 2))
+
+# Create scatter plots
+for (col in names(numeric_data)) {
+  plot(data[[col]], main=col, xlab="Index", ylab="Value")
+}
+
+``` 
+
+### Missing values handling
+Missing values are denoted by "-1" on the dataset. Thus, I replace all "-1" values with "NA" so that I can handle NAs after!
+
+I am imputing missing values using the mean value of the row (, from which the value is missing)
+
+```{r }
+# Replace -1 with NA
+data[data == -1] <- NA
+
+# Impute missing values with mean
+data  <- data %>%
+  mutate_all(~ifelse(is.na(.), mean(., na.rm = TRUE), .))
+
+```
+
+
+
+### Adding new Education Column
+I am adding the column "Education.Elementary_School_and_below" and I calculate its values!
+(This is done after the NA handling so that the missing values are not included in the calculation as "-1" )
+
+```{r }
+
+# Rename column with special characters
+names(data)[names(data) == "Education.Bachelor.s.Degree.or.Higher"] <- "Education.Bachelors_Degree_or_Higher"
+names(data)[names(data) == "Education.High.School.or.Higher"] <- "Education.High_School_or_Higher"
+
+
+# Perform calculation
+data <- data %>%
+  mutate(Education_Elementary_School_and_below = 100 - (Education.Bachelors_Degree_or_Higher + Education.High_School_or_Higher))
+
+```
+
+### Boxplot for outlier values 
+Plotting of boxplots in order to detect extreme values! 
+```{r }
+# Boxplot for each numeric variable
+numeric_vars <- sapply(data, is.numeric)
+numeric_data <- data[, numeric_vars]
+
+par(mfrow=c(2,2)) # Change the layout to arrange plots in a 2x2 grid
+for (col in names(numeric_data)) {
+  boxplot(data[[col]], main=col)
+}
+```
+
+
+## 2. Data analysis and plotting! Univariate - Multivariate analysis 
+### For this task, I chose age, housing and income as the 3 categories that I will further explore! 
+
+### First, I explore the category "age" - Univariate analysis for each of the three columns of this category
+
+
+Summary of statistics for the three age-related variables!
+```{r }
+summary_age <- data %>%
+  select(`Age.Percent.65.and.Older`, `Age.Percent.Under.18.Years`, `Age.Percent.Under.5.Years`) %>%
+  summary()
+print(summary_age)
+```
+
+
+Visualizations for each age-related variable: Histograms!
+
+Histogram plots for each age-related variable distribution!
+
+```{r }
+
+#  Histogram for 'Age.Percent.65.and.Older'
+ggplot(data, aes(x = `Age.Percent.65.and.Older`)) +
+  geom_histogram(binwidth = 2, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Age.Percent.65.and.Older",
+       x = "Percentage", y = "Frequency") +
+  theme_minimal()
+
+#  Histogram for 'Age.Percent.Under.18.Years'
+ggplot(data, aes(x = `Age.Percent.Under.18.Years`)) +
+  geom_histogram(binwidth = 2, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Age.Percent.Under.18.Years",
+       x = "Percentage", y = "Frequency") +
+  theme_minimal()
+
+#  Histogram for 'Age.Percent.Under.5.Years'
+ggplot(data, aes(x = `Age.Percent.Under.5.Years`)) +
+  geom_histogram(binwidth = 2, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Age.Percent.Under.5.Years",
+       x = "Percentage", y = "Frequency") +
+  theme_minimal()
+
+
+```
+
+
+Histogram plots for each age-related variable, faceted by State
+```{r }
+
+# Histogram for 'Age.Percent.65.and.Older' faceted by State
+ggplot(data, aes(x = `Age.Percent.65.and.Older`)) +
+  geom_histogram(binwidth = 2, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Age.Percent.65.and.Older by State",
+       x = "Percentage", y = "Frequency") +
+  facet_wrap(~State) +  # Facet by State
+  theme_minimal()
+
+# Histogram for 'Age.Percent.Under.18.Years' faceted by State
+ggplot(data, aes(x = `Age.Percent.Under.18.Years`)) +
+  geom_histogram(binwidth = 2, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Age.Percent.Under.18.Years by State",
+       x = "Percentage", y = "Frequency") +
+  facet_wrap(~State) +  # Facet by State
+  theme_minimal()
+
+# Histogram for 'Age.Percent.Under.5.Years' faceted by State
+ggplot(data, aes(x = `Age.Percent.Under.5.Years`)) +
+  geom_histogram(binwidth = 2, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Age.Percent.Under.5.Years by State",
+       x = "Percentage", y = "Frequency") +
+  facet_wrap(~State) +  # Facet by State
+  theme_minimal()
+``` 
+### Maps for the age-related features! 
+```{r }
+# Rename "State" to "state" so that it is recognisable by the package
+data <- data %>% 
+  rename(state = State)
+
+
+# Create maps for each age-related feature
+# Age.Percent.65.and.Older
+map_65_and_older <- plot_usmap(data = data, values = "Age.Percent.65.and.Older", 
+                               color = "blue") + 
+                    scale_fill_continuous(name = "Percentage", label = scales::percent) +
+                    labs(title = "Percentage of Population Aged 65 and Older by State")
+
+# Age.Percent.Under.18.Years
+map_under_18 <- plot_usmap(data = data, values = "Age.Percent.Under.18.Years", 
+                           color = "blue") + 
+                scale_fill_continuous(name = "Percentage", label = scales::percent) +
+                labs(title = "Percentage of Population Under 18 Years by State")
+
+# Age.Percent.Under.5.Years
+map_under_5 <- plot_usmap(data = data, values = "Age.Percent.Under.5.Years", 
+                          color = "blue") + 
+               scale_fill_continuous(name = "Percentage", label = scales::percent) +
+               labs(title = "Percentage of Population Under 5 Years by State")
+
+# Display the maps
+print(map_65_and_older)
+print(map_under_18)
+print(map_under_5)
+
+``` 
+
+### Then, I explore the category "housing" - Univariate and Multivariate analysis for each of the five columns of this category
+
+Summary of statistics for the three housing -related variables!
+```{r }
+summary_housing <- data %>%
+  select(`Housing.Homeownership.Rate`, `Housing.Households`, `Housing.Housing.Units`, `Housing.Median.Value.of.Owner.Occupied.Units`,`Housing.Persons.per.Household` ) %>%
+  summary()
+print(summary_housing)
+```
+
+Univariate analysis for housing-related variables: Boxplots per State! 
+```{r }
+# Define the housing variables
+housing_variables <- c("Housing.Homeownership.Rate", "Housing.Households", 
+                        "Housing.Housing.Units", "Housing.Median.Value.of.Owner.Occupied.Units",
+                        "Housing.Persons.per.Household")
+
+
+univariate_results <- lapply(housing_variables, function(variable) {
+  # Create a boxplot for each housing variable
+  boxplot(data[[variable]] ~ data$state, 
+          main = paste("Boxplot of", variable, "by State"),
+          xlab = "State", ylab = variable)
+})
+
+
+``` 
+
+Multivariate analysis: Correlation Matrix among all housing-related variables! 
+```{r }
+
+# Correlation matrix
+correlation_matrix <- cor(data[housing_variables])
+library(corrplot)
+
+# Plot correlation matrix as a heatmap
+corrplot(correlation_matrix, method = "color")
+```
+
+### Maps for the housing-related features! 
+```{r }
+# Select the relevant housing features
+housing_data <- data %>%
+  select(state, Housing.Homeownership.Rate, Housing.Households,
+         Housing.Housing.Units, Housing.Median.Value.of.Owner.Occupied.Units,
+         Housing.Persons.per.Household)
+
+# Define a function to create a map with specified data
+create_housing_map <- function(data, column_name) {
+  # Create a map with data
+  plot_usmap(data = data, values = column_name) +
+    scale_fill_continuous(name = column_name)
+}
+
+# Create maps for each housing feature
+for (column_name in colnames(housing_data)[-1]) {
+  housing_map <- create_housing_map(housing_data, column_name)
+  print(housing_map)
+}
+
+``` 
+
+
+### Lastly, I explore the category "income" - Univariate analysis for each of the two columns of this category
+
+Summary of statistics for the two income-related variables!
+```{r }
+summary_income <- data %>%
+  select(`Income.Median.Houseold.Income`, `Income.Per.Capita.Income`) %>%
+  summary()
+print(summary_income)
+```
+
+
+Univariate analysis: Histograms for the two variables
+
+```{r }
+# Univariate Analysis: Histograms for each income-related variable
+ggplot(data, aes(x = Income.Median.Houseold.Income)) +
+  geom_histogram(binwidth = 2000, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Median Household Income",
+       x = "Income", y = "Frequency") +
+  theme_minimal()
+
+ggplot(data, aes(x = Income.Per.Capita.Income)) +
+  geom_histogram(binwidth = 1000, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Per Capita Income",
+       x = "Income", y = "Frequency") +
+  theme_minimal()
+
+
+``` 
+
+Histograms for the two variables in relation to the "state"
+```{r }
+# Univariate Analysis: Histograms for each income-related variable by State
+ggplot(data, aes(x = Income.Median.Houseold.Income, fill = state)) +
+  geom_histogram(binwidth = 2000, color = "black") +
+  labs(title = "Distribution of Median Household Income by State",
+       x = "Income", y = "Frequency") +
+  theme_minimal()
+
+ggplot(data, aes(x = Income.Per.Capita.Income, fill = state)) +
+  geom_histogram(binwidth = 1000, color = "black") +
+  labs(title = "Distribution of Per Capita Income by State",
+       x = "Income", y = "Frequency") +
+  theme_minimal()
+``` 
+
+ 
+## 3. PCA: Visualization of states in 2d space! 
+```{r pca }
+# Perform PCA
+pca <- prcomp(data[housing_variables], scale. = TRUE)
+
+# Extract PCA scores
+pca_scores <- as.data.frame(pca$x[, 1:2])  # Extracting the first two principal components
+pca_scores$state <- data$state  # Adding the State column to the PCA scores dataframe
+
+# Plot the PCA scores with state labels and colors
+p <- ggplot(pca_scores, aes(x = PC1, y = PC2, color = state)) +
+  geom_point() +
+  geom_text_repel(aes(label = state), size = 3) + # Adding state labels with repelling
+  labs(x = "Principal Component 1", y = "Principal Component 2", title = "PCA Visualization of States") +
+  theme_minimal() +
+  theme(legend.position = "none")  # Hide the legend for state colors
+
+# Create a data frame for the legend
+legend_data <- data.frame(state = unique(pca_scores$state), 
+                           Color = scales::hue_pal()(length(unique(pca_scores$state))))
+
+# Plot the legend manually
+legend_plot <- ggplot(legend_data, aes(x = 1, y = seq_along(state), color = state, label = state)) +
+  geom_point(size = 3) +
+  geom_text(aes(label = state), hjust = -0.1) +
+  scale_color_manual(values = unique(legend_data$Color)) +
+  theme_void() +
+  labs(color = "state")
+
+# Arrange the main plot and legend plot side by side
+combined_plot <- cowplot::plot_grid(p, legend_plot, ncol = 2, align = "h", rel_widths = c(0.8, 0.2))
+
+# Display the combined plot
+print(combined_plot)
+``` 
